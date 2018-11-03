@@ -1,6 +1,8 @@
 module operations
-
 import Data.Vect
+
+operations : IO ()
+operations = putStrLn "Hello, Idris World!"
 
 ||| suggest possible operations that would satisfy given input and output types (could be more than one answer in each case)
 
@@ -18,3 +20,4 @@ op3 (x :: xs) = xs
 ||| Assume that Bounded n represents a number between zero and n - 1
 op4 : Vect 4 elem -> elem
 op4 (x :: xs) = x
+
