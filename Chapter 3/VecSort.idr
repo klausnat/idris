@@ -28,26 +28,10 @@ total my_map_vect : (a -> b) -> Vect n a -> Vect n b
 my_map_vect f [] = []
 my_map_vect f (x :: xs) = (f x) :: (my_map_vect f xs)
 
-{-
 ||| Matrix operations and their types
 
-matrix : Vect rows (Vect cols elem)
+||| matrix : Vect rows (Vect cols elem)
 
-addMatrix : Vect rows (Vect cols numType) ->
-            Vect rows (Vect cols numType) ->
-            Vect rows (Vect cols numType)
-
-||| Matrix multiplication
-||| amount of elems in row of first matrix should be equal to 
-||| amount of elements in column in second matrix
-
-multMatrix : Num numType => 
-             Vect n (Vect m numType) ->
-             Vect m (Vect p numType) ->
-             Vect n (Vect p numType)
-
--}
-                                                    
 ||| Transposing a matrix
 
 ||| Reimplement transposeMat using zipWith instead of transposeHelper
@@ -74,3 +58,29 @@ sumVects (x :: xs) (y :: ys) = (x + y) :: (sumVects xs ys)
 
 addMatrix : Num a => Vect n (Vect m a) -> Vect n (Vect m a) -> Vect n (Vect m a)
 addMatrix vec1 vec2 = zipWith (sumVects) vec1 vec2
+
+||| Implement a function for multiplying matrices
+
+||| amount of elems in row of first matrix should be equal to 
+||| amount of elements in column in second matrix
+
+multVects : Num numType => (x : Vect m numType) -> (y : Vect m numType) -> numType
+multVects [] [] = 0
+multVects (x :: xs) (y :: ys) = x*y + multVects xs ys
+
+createRow : Num numType => (x : Vect m numType) -> (ys : Vect p (Vect m numType)) -> Vect p numType
+createRow x [] = []
+createRow x (y :: xs) = (multVects x y) :: createRow x xs
+
+multMatrixHelper : Num numType => Vect n (Vect m numType) -> Vect p (Vect m numType) -> Vect n (Vect p numType)
+multMatrixHelper [] [] = []
+multMatrixHelper [] (x :: xs) = []
+multMatrixHelper (x :: xs) [] = [] :: multMatrixHelper xs []
+multMatrixHelper (x :: xs) ys = (createRow x ys) :: (multMatrixHelper xs ys)
+
+multMatrix : Num numType => 
+             Vect n (Vect m numType) ->
+             Vect m (Vect p numType) ->
+             Vect n (Vect p numType)
+multMatrix xs ys = multMatrixHelper xs (transposeMat ys)
+
