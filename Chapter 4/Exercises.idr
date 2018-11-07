@@ -20,3 +20,20 @@ listToTree (x :: xs) = insert x (listToTree xs)
 treeToList : Tree a -> List a 
 treeToList Empty = []
 treeToList (Node tree x tree1) = treeToList tree ++ [x] ++ treeToList tree1
+
+||| 3. Define a recursive data type Expr for integer arifmetic expression
+
+data Expr = Val Int
+          | Add Expr Expr
+          | Sub Expr Expr
+          | Mult Expr Expr
+
+%name Expr expr, expr1, expr2
+                    
+||| 4. Write a function evaluate that evaluates an integer arifmetic expression
+
+evaluate : Expr -> Int                    
+evaluate (Val x) = x
+evaluate (Add expr expr1) = evaluate expr + evaluate expr1
+evaluate (Sub expr expr1) = evaluate expr - evaluate expr1
+evaluate (Mult expr expr1) = evaluate expr * evaluate expr1
