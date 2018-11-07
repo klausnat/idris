@@ -37,3 +37,17 @@ evaluate (Val x) = x
 evaluate (Add expr expr1) = evaluate expr + evaluate expr1
 evaluate (Sub expr expr1) = evaluate expr - evaluate expr1
 evaluate (Mult expr expr1) = evaluate expr * evaluate expr1
+
+||| 5. Write a function maxMaybe : Ord a => Maybe a -> Maybe a -> Maybe a that returns a larger of the two inputs, or Nothing if both inputs are Nothing
+
+maxMaybe : Ord a => Maybe a -> Maybe a -> Maybe a
+maxMaybe Nothing Nothing = Nothing
+maxMaybe Nothing (Just x) = Just x 
+maxMaybe (Just x) Nothing = Just x
+maxMaybe (Just x) (Just y) = case compare x y of
+                             LT => Just y
+                             EQ => Just x
+                             GT => Just x
+
+
+{- 6. biggestTriangle function is in the file (Chapter 4/dataTypes.idr) -}

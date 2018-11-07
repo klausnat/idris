@@ -5,6 +5,8 @@
    Dependent types
 -}
 
+||| Exercise 6 : Write a function biggestTriangle that returns the area of the biggest triangle in a picture, or Nothing if there are no triangles
+
 data Shape = Triangle Double Double
            | Rectangle Double Double
            | Circle Double
