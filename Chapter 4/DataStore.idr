@@ -46,22 +46,17 @@ getEntry pos store = let store_items = items store in
                                   Nothing => Just ("Out of range \n", store)
                                   Just id => Just (index id store_items ++ "\n", store)
 
-showStrings : (store : DataStore) -> (str : String) -> (vect : Vect (size store) String) -> Maybe (String, DataStore)
-showStrings store str vect = Just (generateStringsResult "" str vect, store) where
-            generateStringsResult : (resultString : String) -> 
-                                    (subStr : String) -> 
-                                    (storedStringsVect : Vect k String) ->
-                                    String 
-            generateStringsResult resultString subStr [] = resultString
-            generateStringsResult resultString subStr (x :: xs) 
-              = case isInfixOf subStr x of
-                        True  => generateStringsResult (x ++ "; "  ++ resultString) subStr xs
-                        False => generateStringsResult resultString subStr xs 
+showStrings : (resultString : String) -> (subStr : String) -> (storedStringsVect : Vect k String) -> String 
+showStrings resultString subStr [] = resultString
+showStrings {k} resultString subStr (x :: xs) 
+              = case Strings.isInfixOf subStr x of
+                        True  => showStrings (show k ++ ": " ++ x ++ "; "  ++ resultString) subStr xs
+                        False => showStrings resultString subStr xs 
                                                    
 
-findSubString : (store : DataStore) -> (str : String) -> Maybe (String, DataStore)
+findSubString : (store : DataStore) -> (str : String) -> String
 findSubString store str = let vect = items store in
-                               showStrings store str vect
+                               showStrings "" str vect
 
 processInput : DataStore -> String -> Maybe (String, DataStore)
 processInput store inp 
@@ -70,7 +65,7 @@ processInput store inp
          Just (Add item) => Just ("ID " ++ show (size store) ++ "\n", addToStore store item)
          Just (Get pos) => getEntry pos store
          Just Size => Just ("Size " ++ show (size store) ++ "\n", store)
-         Just (Search str) => findSubString store str
+         Just (Search str) => Just (findSubString store str ++ "\n", store)
          Just Quit => Nothing
 
 main : IO ()
