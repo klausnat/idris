@@ -4,20 +4,20 @@ import Data.Vect
 
 data DataStore : Type where
      MkData : (size : Nat) -> 
-              (items : Vect size String) -> 
+              (items : Vect size (Nat,String)) -> 
               DataStore
               
 size : DataStore -> Nat              
 size (MkData size' items') = size'
 
-items : (store : DataStore) -> Vect (size store) String
+items : (store : DataStore) -> Vect (size store) (Nat,String)
 items (MkData size' items') = items'
 
 addToStore : DataStore -> String -> DataStore
 addToStore (MkData size items) newitem = MkData _ (addToData items) 
   where
-    addToData : Vect old String -> Vect (S old) String
-    addToData [] = [newitem]
+    addToData : Vect old (Nat,String) -> Vect (S old) (Nat,String)
+    addToData [] = [(size, newitem)]
     addToData (x :: xs) = x :: addToData xs
 
 data Command = Add String 
@@ -44,13 +44,13 @@ getEntry : (pos : Integer) -> (store : DataStore) -> Maybe (String, DataStore)
 getEntry pos store = let store_items = items store in
                              case integerToFin pos (size store) of
                                   Nothing => Just ("Out of range \n", store)
-                                  Just id => Just (index id store_items ++ "\n", store)
+                                  Just id => let (i, s) = index id store_items in Just (show i ++ ", " ++ s ++ "\n", store)
 
-showStrings : (resultString : String) -> (subStr : String) -> (storedStringsVect : Vect k String) -> String 
+showStrings : (resultString : String) -> (subStr : String) -> (storedStringsVect : Vect k (Nat,String)) -> String 
 showStrings resultString subStr [] = resultString
-showStrings resultString subStr myvect@(x :: xs) 
-              = case Strings.isInfixOf subStr x of
-                        True  => showStrings (show (length myvect) ++ ": "  ++ x ++ "; " ++ resultString) subStr xs
+showStrings resultString subStr myvect@((i,s) :: xs) 
+              = case Strings.isInfixOf subStr s of
+                        True  => showStrings (show i ++ ": "  ++ s ++ "; " ++ resultString) subStr xs
                         False => showStrings resultString subStr xs 
                                                    
 
