@@ -48,9 +48,9 @@ getEntry pos store = let store_items = items store in
 
 showStrings : (resultString : String) -> (subStr : String) -> (storedStringsVect : Vect k String) -> String 
 showStrings resultString subStr [] = resultString
-showStrings {k} resultString subStr (x :: xs) 
+showStrings resultString subStr myvect@(x :: xs) 
               = case Strings.isInfixOf subStr x of
-                        True  => showStrings (show k ++ ": " ++ x ++ "; "  ++ resultString) subStr xs
+                        True  => showStrings (show (length myvect) ++ ": "  ++ x ++ "; " ++ resultString) subStr xs
                         False => showStrings resultString subStr xs 
                                                    
 
