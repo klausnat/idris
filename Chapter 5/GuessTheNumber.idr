@@ -1,5 +1,7 @@
 module Main
 
+import System
+
 ||| Write a function that implements a simple "guess the number game"
 
 readNumber : IO (Maybe Nat)
@@ -8,12 +10,23 @@ readNumber = do x <- getLine
                    then pure (Just (cast x))
                    else pure Nothing
 
-guess : (target : Nat) -> IO ()
-guess target = do putStr "Enter a guess: "
-                  Just x <- readNumber | Nothing => do putStrLn ("Not a valid input")
-                                                       guess target
-                  if x == target then do putStrLn "You win!"
-                                         pure ()
-                                 else do putStrLn ("Nope!")
-                                         guess target
+guess : (target : Nat) -> (amountOfGuesses : Nat) -> IO ()
+guess target n = do putStr "Used amount of guesses: "
+                    putStrLn (show n)
+                    putStr "Enter a guess: "
+                    Just x <- readNumber | Nothing => do putStrLn ("Not a valid input")
+                                                         guess target (S n)
+                    if x == target then do putStrLn "Correct! You win!"
+                                           pure ()
+                    else if x < target then do putStrLn "Too low"
+                                               guess target (S n)
+                    else do putStrLn "Too high"
+                            guess target (S n)
 
+main : IO ()
+main = do rand <- time
+          let reminder = mod rand 100
+          guess (cast reminder) Z
+
+ 
+ 
