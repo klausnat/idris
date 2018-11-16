@@ -19,9 +19,11 @@ main = replNatasha "Write youre name: " (\x => "Hello " ++ x ++ "! \n")
 replWithNatasha : (state : a) -> (prompt : String) -> (onInput : a -> String -> Maybe (String,a)) -> IO ()
 replWithNatasha state prompt onInput = do putStr prompt
                                           input <- getLine 
-                                          pure (Just (res,newState)) <- onInput state input | Nothing => replWithNatasha state prompt onInput
-                                          putStrLn res
-                                          replWithNatasha newState prompt onInput
+                                          case onInput state input of
+                                               Just (res, newState) => do 
+                                                                         putStrLn res
+                                                                         replWithNatasha newState prompt onInput
+                                               Nothing => replWithNatasha state prompt onInput
 
 
 sumInputs : Integer -> String -> Maybe (String, Integer)
