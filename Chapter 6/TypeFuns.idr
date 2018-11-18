@@ -25,6 +25,14 @@ adder Z acc = acc
 adder (S k) acc = \next => adder k (next + acc)
 
 -- for any numeric type
+AdderType' : (numargs : Nat) -> Type -> Type
+AdderType' Z x = x
+AdderType' (S k) x = (next : x) -> AdderType' k x
+
+adder' : Num numType => (numargs : Nat) -> numType -> AdderType' numargs numType 
+adder' Z acc = acc
+adder' (S k) acc = \next => adder' k (next + acc)
+
 
 
  
