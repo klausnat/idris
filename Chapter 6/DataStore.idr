@@ -20,9 +20,7 @@ record DataStore where
        items : Vect size (SchemaType schema)
 
 teststore : DataStore              
-teststore = (MkData (SString .+. SInt) 1 [("Answer",42)])
-
-
+teststore = (MkData (SString .+. SInt) 2 [("Answer",42), ("Question", 3)])
 
 
 addToStore : (store : DataStore) -> SchemaType (schema store) -> DataStore
@@ -34,12 +32,58 @@ addToStore (MkData schema size store) newitem = MkData schema _ (addToData store
 
 
 data Command : Schema -> Type where 
+      SetSchema : (newSchema : Schema) -> Command schema
       Add : SchemaType schema -> Command schema
       Get : Integer -> Command schema
       Quit : Command schema
 
+parseSchema : List String -> Maybe Schema
+parseSchema ("String" :: xs) = case xs of
+                                    [] => Just SString
+                                    _ => case parseSchema xs of 
+                                              Nothing => Nothing
+                                              Just xs_sch => Just (SString .+. xs_sch)
+
+parseSchema ("Int" :: xs) = case xs of
+                                 [] => Just SInt
+                                 _ => case parseSchema xs of
+                                           Nothing => Nothing
+                                           Just xs_sch => Just (SInt .+. xs_sch)
+parseSchema _ = Nothing
+
+parsePrefix : (schema : Schema) -> String -> Maybe (SchemaType schema, String)
+parsePrefix SString input = getQuoted (unpack input) 
+            where
+               getQuoted : List Char -> Maybe (String, String)
+               getQuoted ('"' :: xs) = case span (/= '"') xs of
+                                              (quoted, '"' :: rest) => Just (pack quoted, ltrim (pack rest))
+                                              _                     => Nothing
+               getQuoted _ = Nothing
+
+
+parsePrefix SInt input = case span isDigit input of
+                              ("",rest) => Nothing
+                              (num,rest)  => Just (cast num, ltrim rest)
+parsePrefix (schema1 .+. schema2) input = case (parsePrefix schema1 input) of
+                                               Nothing => Nothing
+                                               Just (l_val, input') => case parsePrefix schema2 input' of
+                                                                            Nothing => Nothing
+                                                                            Just (r_val, input'') => Just ((l_val, r_val), input'')
+
+parseBySchema : (schema : Schema) -> (input : String) -> Maybe (SchemaType schema)
+parseBySchema schema input = case parsePrefix schema input of 
+                                  Just (res, "") => Just res
+                                  Just _         => Nothing 
+                                  Nothing        => Nothing            
+
 parseCommand : (schema : Schema) -> String -> String -> Maybe (Command schema)
-parseCommand schema "Add" arg = Just (Add (?xx arg))
+parseCommand schema "Schema" rest = case parseSchema (words rest) of
+                                         Nothing => Nothing
+                                         Just schemaok => Just (SetSchema schemaok)
+                                         
+parseCommand schema "Add" rest = case (parseBySchema schema rest) of
+                                      Nothing => Nothing
+                                      Just restok => Just (Add restok)
 parseCommand schema "Get" val = case all isDigit (unpack val) of
                               False => Nothing 
                               True => Just (Get (cast val))
@@ -52,12 +96,15 @@ parse schema input = case span (/= ' ') input of
 
 
 display : SchemaType schema -> String
+display {schema = SString}  x = show x
+display {schema = SInt}  x = show x
+display {schema = (y .+. z)}  (xleft, xright) = display xleft ++ ", " ++ display xright
 
 getEntry : (pos : Integer) -> (store : DataStore) -> Maybe (String, DataStore)
 getEntry pos store = let store_items = items store in
                              case integerToFin pos (size store) of
                                   Nothing => Just ("Out of range \n", store)
-                                  Just id => Just ((display store id pos store_items) (index id (items store)) ++ "\n", store)
+                                  Just id => Just (display (index id (items store)) ++ "\n", store)
 
 
 showStrings : (resultString : String) -> (subStr : String) -> (storedStringsVect : Vect k (Nat,String)) -> String 
@@ -68,12 +115,20 @@ showStrings resultString subStr myvect@((i,s) :: xs)
                         False => showStrings resultString subStr xs 
                                                    
 
+setSchema : (store : DataStore) -> Schema -> Maybe (DataStore)
+setSchema store schema = case size store of 
+                              Z => Just (MkData schema _ [])
+                              S k => Nothing 
 
 processInput : DataStore -> String -> Maybe (String, DataStore)
 processInput store inp 
   = case parse (schema store) inp of
          Nothing  => Just ("Invalid command\n", store)
+         
          Just (Add item) => Just ("ID " ++ show (size store) ++ "\n", addToStore store item)
+         Just (SetSchema schema') => case setSchema store schema' of
+                                          Nothing => Just ("Can't update schema \n", store)
+                                          Just store' => Just ("OK\n", store')
          Just (Get pos) => getEntry pos store
          Just Quit => Nothing
 
