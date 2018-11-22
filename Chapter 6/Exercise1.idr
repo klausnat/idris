@@ -6,11 +6,14 @@ infixr 5 .+.
 
 data Schema = SString
             | SInt
+            | SChar
             | (.+.) Schema Schema
 
 SchemaType : Schema -> Type
 SchemaType SString = String
+SchemaType SChar = Char
 SchemaType SInt = Int
+
 SchemaType (x .+. y) = (SchemaType x, SchemaType y)
 
 record DataStore where
@@ -49,6 +52,12 @@ parseSchema ("Int" :: xs) = case xs of
                                  _ => case parseSchema xs of
                                            Nothing => Nothing
                                            Just xs_sch => Just (SInt .+. xs_sch)
+parseSchema ("Char" :: xs) = case xs of
+                                 [] => Just SChar
+                                 _ => case parseSchema xs of
+                                           Nothing => Nothing
+                                           Just xs_sch => Just (SChar .+. xs_sch)
+                                                                                      
 parseSchema _ = Nothing
 
 parsePrefix : (schema : Schema) -> String -> Maybe (SchemaType schema, String)
@@ -64,6 +73,9 @@ parsePrefix SString input = getQuoted (unpack input)
 parsePrefix SInt input = case span isDigit input of
                               ("",rest) => Nothing
                               (num,rest)  => Just (cast num, ltrim rest)
+
+parsePrefix SChar input = let (x :: rest) = unpack input in Just (x, ltrim (pack rest))
+
 parsePrefix (schema1 .+. schema2) input = case (parsePrefix schema1 input) of
                                                Nothing => Nothing
                                                Just (l_val, input') => case parsePrefix schema2 input' of
@@ -97,6 +109,7 @@ parse schema input = case span (/= ' ') input of
 display : SchemaType schema -> String
 display {schema = SString}  x = show x
 display {schema = SInt}  x = show x
+display {schema = SChar} x = show x
 display {schema = (y .+. z)}  (xleft, xright) = display xleft ++ ", " ++ display xright
 
 getEntry : (pos : Integer) -> (store : DataStore) -> Maybe (String, DataStore)
@@ -151,5 +164,3 @@ maybeAdd'' : Maybe Int -> Maybe Int -> Maybe Int
 maybeAdd'' x y = do x_val <- x
                     y_val <- y
                     Just (x_val + y_val)
-                    
-                    
