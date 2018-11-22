@@ -43,20 +43,17 @@ data Command : Schema -> Type where
 parseSchema : List String -> Maybe Schema
 parseSchema ("String" :: xs) = case xs of
                                     [] => Just SString
-                                    _ => case parseSchema xs of 
-                                              Nothing => Nothing
-                                              Just xs_sch => Just (SString .+. xs_sch)
+                                    _ => do xs_sch <- parseSchema xs
+                                            Just (SString .+. xs_sch)
 
 parseSchema ("Int" :: xs) = case xs of
                                  [] => Just SInt
-                                 _ => case parseSchema xs of
-                                           Nothing => Nothing
-                                           Just xs_sch => Just (SInt .+. xs_sch)
+                                 _ => do xs_sch <- parseSchema xs
+                                         Just (SInt .+. xs_sch)
 parseSchema ("Char" :: xs) = case xs of
                                  [] => Just SChar
-                                 _ => case parseSchema xs of
-                                           Nothing => Nothing
-                                           Just xs_sch => Just (SChar .+. xs_sch)
+                                 _ => do xs_sch <- parseSchema xs
+                                         Just (SChar .+. xs_sch)
                                                                                       
 parseSchema _ = Nothing
 
@@ -76,11 +73,9 @@ parsePrefix SInt input = case span isDigit input of
 
 parsePrefix SChar input = let (x :: rest) = unpack input in Just (x, ltrim (pack rest))
 
-parsePrefix (schema1 .+. schema2) input = case (parsePrefix schema1 input) of
-                                               Nothing => Nothing
-                                               Just (l_val, input') => case parsePrefix schema2 input' of
-                                                                            Nothing => Nothing
-                                                                            Just (r_val, input'') => Just ((l_val, r_val), input'')
+parsePrefix (schema1 .+. schema2) input = do (l_val, input') <- parsePrefix schema1 input
+                                             (r_val, input'') <- parsePrefix schema2 input'
+                                             Just ((l_val, r_val), input'')
 
 parseBySchema : (schema : Schema) -> (input : String) -> Maybe (SchemaType schema)
 parseBySchema schema input = case parsePrefix schema input of 
@@ -92,9 +87,8 @@ parseCommand : (schema : Schema) -> String -> String -> Maybe (Command schema)
 parseCommand schema "Schema" rest = do schemaok <- parseSchema (words rest)
                                        Just (SetSchema schemaok)
                                          
-parseCommand schema "Add" rest = case (parseBySchema schema rest) of
-                                      Nothing => Nothing
-                                      Just restok => Just (Add restok)
+parseCommand schema "Add" rest = do restok <- (parseBySchema schema rest)
+                                    Just (Add restok)
 parseCommand schema "Get" val = case all isDigit (unpack val) of
                               False => Nothing 
                               True => Just (Get (cast val))
