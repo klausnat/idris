@@ -35,44 +35,42 @@ getQuotedHelper _ = Nothing
 getQuoted : String -> Maybe (String, String)
 getQuoted x = getQuotedHelper (unpack x)
 
+parsePrefix : (schema : Schema) -> (input : String) -> Maybe (SchemaType schema, String)
+parsePrefix SString input = getQuoted input
+            
+parsePrefix SInt input = case span isDigit input of
+                              (a,b)  => Just (cast a, ltrim b)
+                              ("",_) => Nothing
+
+parsePrefix (y .+. z) input = case parsePrefix y input of 
+                                   Just (resY,input') => case parsePrefix z input' of
+                                                             Just (resZ,input'') => Just ((resY, resZ),input'')
+                                                             Nothing => Nothing
+                                   Nothing => Nothing
+                                                
 
 parseSchema : (schema : Schema) -> String -> Maybe (SchemaType schema)
-parseSchema SString x = case getQuoted x of 
-                             Nothing => Nothing
-                             Just (str,rest) => case rest of 
-                                                     "" => Just str
-                                                     _  => Nothing 
-            
-parseSchema SInt x = case all isDigit (unpack x) of
-                          True => Just (cast x)
-                          False => Nothing
-parseSchema (y .+. z) x = case Strings.span (/= ' ') x of
-                               (a,"") => Nothing
-                               (a,b) => case parseSchema y a of
-                                             Just sch1 => case parseSchema z (ltrim b) of 
-                                                               Nothing => Nothing
-                                                               Just sch2 => Just (sch1, sch2)
-                                             Nothing => Nothing
+parseSchema schema input = case parsePrefix schema input of
+                                Just (res, "") => Just res
+                                Just (res, _)  => Nothing
+                                Nothing        => Nothing
 
-parsePrefix : String -> (Maybe Schema)
-parsePrefix "String" = Just SString
-parsePrefix "Int" = Just SInt
-parsePrefix _ = Nothing
+stringToSchHelper : String -> (Maybe Schema)
+stringToSchHelper "String" = Just SString
+stringToSchHelper "Int" = Just SInt
+stringToSchHelper _ = Nothing
 
 stringToSchema : String -> Maybe Schema
 stringToSchema "" = Nothing
 stringToSchema x  = case Strings.span (/= ' ') x of
-                         (a,"") => case parsePrefix a of 
+                         (a,"") => case stringToSchHelper a of 
                                         Just res => Just res
                                         Nothing => Nothing
-                         (a,b)  => case (parsePrefix a) of 
+                         (a,b)  => case (stringToSchHelper a) of 
                                         Nothing => Nothing
                                         Just resA => case stringToSchema (ltrim b) of
                                                          Nothing => Nothing
                                                          Just resB => Just (resA .+. resB)
-                                                         
-                                                                        
- 
 parse : (schema : Schema) -> (String, String) -> Maybe (Command schema)
 parse schema (a, b) = case a of "Add" => case parseSchema schema (ltrim b) of
                                               Nothing => Nothing
@@ -100,7 +98,7 @@ addItem (MkData schema size items) newitem = ("ID: " ++ cast size ++ "\n", MkDat
 display : (schema : Schema) -> SchemaType schema -> String
 display SString x = x
 display SInt x = show x
-display (y .+. z) (a, b) = (display y a) ++ (display z b)
+display (y .+. z) (a, b) = (display y a) ++ ", " ++ (display z b)
 
 getItem : (store : DataStore) -> (num : Integer) -> Maybe (String, DataStore)
 getItem store@(MkData schema size items) num = case integerToFin num size of
@@ -110,7 +108,7 @@ getItem store@(MkData schema size items) num = case integerToFin num size of
 setSchema : (store : DataStore) -> (schema : Schema) -> Maybe (String, DataStore) 
 setSchema store schema = case length (items store) of
                               Z => Just ("OK \n", MkData schema Z [])
-                              _ => Nothing
+                              _ => Just ("There are entries in the store, can't set new schema! \n", store)
 
 processInput : (store : DataStore) -> (input : String) -> Maybe (String, DataStore)
 processInput store input = case parseCommand (schema store) input of
