@@ -22,6 +22,7 @@ record DataStore where
 data Command : Schema -> Type where
      Add : SchemaType schema -> Command schema
      Get : Integer -> Command schema
+     Set : Schema -> Command schema
      Quit : Command schema
 
 getQuotedHelper : List Char -> Maybe (String, String)
@@ -53,7 +54,25 @@ parseSchema (y .+. z) x = case Strings.span (/= ' ') x of
                                                                Just sch2 => Just (sch1, sch2)
                                              Nothing => Nothing
 
+parsePrefix : String -> (Maybe Schema)
+parsePrefix "String" = Just SString
+parsePrefix "Int" = Just SInt
+parsePrefix _ = Nothing
 
+stringToSchema : String -> Maybe Schema
+stringToSchema "" = Nothing
+stringToSchema x  = case Strings.span (/= ' ') x of
+                         (a,"") => case parsePrefix a of 
+                                        Just res => Just res
+                                        Nothing => Nothing
+                         (a,b)  => case (parsePrefix a) of 
+                                        Nothing => Nothing
+                                        Just resA => case stringToSchema (ltrim b) of
+                                                         Nothing => Nothing
+                                                         Just resB => Just (resA .+. resB)
+                                                         
+                                                                        
+ 
 parse : (schema : Schema) -> (String, String) -> Maybe (Command schema)
 parse schema (a, b) = case a of "Add" => case parseSchema schema (ltrim b) of
                                               Nothing => Nothing
@@ -61,6 +80,9 @@ parse schema (a, b) = case a of "Add" => case parseSchema schema (ltrim b) of
                                 "Get" => case all isDigit (unpack (ltrim b)) of
                                               True => Just (Get (cast b))
                                               False => Nothing 
+                                "Set" => case stringToSchema (ltrim b) of
+                                              Just sch => Just (Set sch)
+                                              Nothing => Nothing
                                 "Quit" => Just Quit
                                 _      => Nothing
 
@@ -78,21 +100,27 @@ addItem (MkData schema size items) newitem = ("ID: " ++ cast size ++ "\n", MkDat
 display : (schema : Schema) -> SchemaType schema -> String
 display SString x = x
 display SInt x = show x
-display (y .+. z) (a, b) = show (display y a, display z b)
+display (y .+. z) (a, b) = (display y a) ++ (display z b)
 
 getItem : (store : DataStore) -> (num : Integer) -> Maybe (String, DataStore)
 getItem store@(MkData schema size items) num = case integerToFin num size of
                                        Nothing  => Just ("Index Out of Bounds \n", store)
                                        Just res => Just (display schema (index res items) ++ "\n", store)
 
+setSchema : (store : DataStore) -> (schema : Schema) -> Maybe (String, DataStore) 
+setSchema store schema = case length (items store) of
+                              Z => Just ("OK \n", MkData schema Z [])
+                              _ => Nothing
+
 processInput : (store : DataStore) -> (input : String) -> Maybe (String, DataStore)
 processInput store input = case parseCommand (schema store) input of
                                 Nothing      => Just ("Invalid command \n", store)
                                 Just (Add str) => Just (addItem store str)
                                 Just (Get num) => getItem store num
+                                Just (Set sche) => setSchema store sche
                                 Just Quit => Nothing
 
 main : IO ()
-main = replWith (MkData (SString .+. SInt .+. SString) Z []) "Command: " processInput
+main = replWith (MkData SString Z []) "Command: " processInput
 
-
+{- пользователь должен вводить схему так : Set String Int Int String -}
