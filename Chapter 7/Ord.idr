@@ -5,16 +5,15 @@ record Album where
   year : Integer
 
 Eq Album where 
-   
-Ord Album where
-  compare x y = ?Ord_rhs_1
-  (<) x y = ?Ord_rhs_2
-  (>) x y = ?Ord_rhs_3
-  (<=) x y = ?Ord_rhs_4
-  (>=) x y = ?Ord_rhs_5
-  max x y = ?Ord_rhs_6
-  min x y = ?Ord_rhs_7
+  (==) (MkAlbum title artist year) (MkAlbum title' artist' year') = title == title' && artist == artist' && year == year' 
 
+Ord Album where 
+    compare (MkAlbum title artist year) (MkAlbum title' artist' year') 
+         = case compare artist artist' of
+                 EQ => case compare year year' of
+                            EQ => compare title title'
+                            diff_years => diff_years
+                 diff_art => diff_art
 clouds : Album
 clouds = MkAlbum "Hello" "Iris Martin" 1983
 
