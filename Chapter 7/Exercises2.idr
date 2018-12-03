@@ -43,3 +43,10 @@ Show ty => Show (Expr ty) where
   show (Div x y) = "(" ++ show x ++ "/" ++ show y ++ ")"
   show (Abs x) = show x
 
+-- Exercise 2 : Implement Eq for the Expr type. Expressions should be considered equal if their evaluation is equal.
+
+(Eq ty, Abs ty, Integral ty, Neg ty) => Eq (Expr ty) where
+  (==) x y = case eval x == eval y of
+                       True => True
+                       False => False 
+
