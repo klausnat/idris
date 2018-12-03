@@ -50,3 +50,7 @@ Show ty => Show (Expr ty) where
                        True => True
                        False => False 
 
+-- Exercise 3 : Implement Cast to allow conversions from Expr num to any appropriately constrained type num.
+
+(Num num, Abs num, Integral num, Neg num) => Cast (Expr num) num where
+  cast expr = (eval expr)
