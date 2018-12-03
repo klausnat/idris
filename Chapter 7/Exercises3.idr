@@ -28,7 +28,6 @@ Neg ty => Neg (Expr ty) where
 Abs ty => Abs (Expr ty) where
     abs = Abs
 
-
 Functor Expr where
   map func (Val x) = Val (func x)
   map func (Add x y) = Add (map func x) (map func y)
@@ -36,3 +35,21 @@ Functor Expr where
   map func (Mul x y) = Mul (map func x) (map func y)
   map func (Div x y) = Div (map func x) (map func y)
   map func (Abs x) = Abs (map func x)
+
+-- Ex.2 Implement Eq and Foldable for Vect
+
+data Vect : (len : Nat) -> (elem : Type) -> Type  where
+     Nil : Vect Z elem
+     (::) : elem -> Vect len elem -> Vect (S len) elem 
+
+Eq elem => Eq (Vect n elem) where          
+  (==) [] [] = True
+  (==) (x :: xs) (y :: ys) = case x == y of
+                                  True => True
+                                  False => False
+
+
+Foldable (Vect n) where
+  foldr func init [] = init
+  foldr func init (x :: xs) = func x (foldr func init xs)
+
