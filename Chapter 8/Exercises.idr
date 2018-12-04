@@ -16,12 +16,13 @@ same_lists Refl Refl = Refl
 -- 3. Define a type ThreeEq that expresses that three values must be equal
 
 data ThreeEq : a -> b -> c -> Type where
-     SameThree : x -> ThreeEq x x x
+     SameThree : (x : a) -> ThreeEq x x x
 
 -- 4. Implement the following function which uses ThreeEq
 
-congForThreeEq : (x,y,z : Nat) -> (eq : ThreeEq x y z) -> ThreeEq (S x) (S y) (S z)
+congForThreeEq : (x : Nat) -> (y : Nat) -> (z : Nat) -> (eq : ThreeEq x y z) -> ThreeEq (S x) (S y) (S z)
 congForThreeEq a a a (SameThree a) = SameThree (S a)
+
 
 allSameS : (x, y, z : Nat) -> ThreeEq x y z -> ThreeEq (S x) (S y) (S z)
 allSameS x y z x1 = congForThreeEq x y z x1
