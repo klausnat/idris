@@ -17,11 +17,21 @@ checkEqNat (S k) (S j) = case checkEqNat k j of
                               Just (eq) => Just (sameS _ _ eq)
                               Nothing => Nothing
 
-exactLength : (len : Nat) -> (input : Vect m a) -> Maybe (Vect len a)
-exactLength {m} len input = case m == len of
-                                 True => ?ss
-                                 False => Nothing
+-- checkEqNat uses general Refl constructor 
+checkEqNat''' : (num1 : Nat) -> (num2 : Nat) -> Maybe (num1 = num2)
+checkEqNat''' Z Z = Just Refl
+checkEqNat''' Z (S k) = Nothing
+checkEqNat''' (S k) Z = Nothing
+checkEqNat''' (S k) (S j) = case checkEqNat''' k j of
+                              Just (eq) => Just (cong eq)
+                              Nothing => Nothing
 
+exactLength : (len : Nat) -> (input : Vect m a) -> Maybe (Vect len a)
+exactLength {m} len input = case checkEqNat m len of
+                                 Nothing => Nothing
+                                 Just (Same m) => Just input
+
+-- Exercise: Listing 8.3: sameS with case split on eq, and with do notation
 checkEqNat' : (num1 : Nat) -> (num2 : Nat) -> Maybe (EqNat num1 num2)
 checkEqNat' Z Z = Just (Same Z)
 checkEqNat' Z (S k) = Nothing
