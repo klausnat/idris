@@ -11,7 +11,32 @@ data Elem : (value : a) -> List a -> Type where
      
 -}
 
--- 2. The following predicate states that a specific value is the last value in a List. Write an isLast function
+-- 2. The following predicate states that a specific value is the last value in a List. Write an isLast function that decides whether a value is the last element in a list
 
 data Last : List a -> a -> Type where
+     LastOne : Last [value] value
+     LastCons : (prf : Last xs value) -> Last (x :: xs) value 
 
+
+
+notInNil : Last [] value -> Void
+notInNil LastOne impossible
+notInNil (LastCons _) impossible
+
+notTheLast : (notEq : (x = value) -> Void) -> Last [x] value -> Void
+notTheLast notEq LastOne = notEq Refl
+notTheLast notEq (LastCons prf) = notInNil prf
+
+gg_1 : (notLast : Last xs value -> Void) -> Last (x :: xs) value -> Void
+gg_1 notLast lst = absurd ?ss
+
+
+isLast : DecEq a => (xs : List a) -> (value : a) -> Dec (Last xs value)
+isLast [] value = No notInNil
+isLast (x :: []) value = case decEq x value of
+                              Yes Refl => Yes LastOne 
+                              No notEq => No (notTheLast notEq)
+isLast (x :: xs) value = case isLast xs value of
+                               Yes LastOne => Yes (LastCons LastOne)
+                               Yes (LastCons prf) => Yes (LastCons (LastCons prf))
+                               No notLast => No (gg_1 notLast)
