@@ -17,6 +17,11 @@ data Last : List a -> a -> Type where
      LastOne : Last [value] value
      LastCons : (prf : Last xs value) -> Last (x :: xs) value 
 
+noEmptyLast : {x : a} -> Last [] x -> Void
+noEmptyLast LastOne impossible
+
+Uninhabited (Last [] x) where
+  uninhabited = noEmptyLast
 
 
 notInNil : Last [] value -> Void
@@ -27,16 +32,12 @@ notTheLast : (notEq : (x = value) -> Void) -> Last [x] value -> Void
 notTheLast notEq LastOne = notEq Refl
 notTheLast notEq (LastCons prf) = notInNil prf
 
-gg_1 : (notLast : Last xs value -> Void) -> Last (x :: xs) value -> Void
-gg_1 notLast lst = absurd ?ss
+
 
 
 isLast : DecEq a => (xs : List a) -> (value : a) -> Dec (Last xs value)
 isLast [] value = No notInNil
-isLast (x :: []) value = case decEq x value of
-                              Yes Refl => Yes LastOne 
-                              No notEq => No (notTheLast notEq)
-isLast (x :: xs) value = case isLast xs value of
-                               Yes LastOne => Yes (LastCons LastOne)
-                               Yes (LastCons prf) => Yes (LastCons (LastCons prf))
-                               No notLast => No (gg_1 notLast)
+isLast xs value = case isLast xs value of
+                                  Yes LastOne => Yes LastOne
+                                  Yes (LastCons prf) => Yes (LastCons prf)
+                                  No contra => No contra
