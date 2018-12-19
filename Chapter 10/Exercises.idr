@@ -35,3 +35,12 @@ toBinary n with (halfRec n)
   toBinary (S (x + x)) | (HalfRecOdd rec) = (toBinary x | rec) ++ "1"
 
 -- 4. Write a palindrome function that returns whether a list is the same when traversed forwards and backwards, using the VList view defined in Data.List.Views
+
+palindrome : Eq a => (input : List a) -> Bool
+palindrome input with (vList input)
+  palindrome [] | VNil = True
+  palindrome [x] | VOne = True
+  palindrome (x :: (xs ++ [y])) | (VCons rec) 
+              = if x == y then palindrome xs | rec
+                          else False 
+
