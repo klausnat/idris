@@ -3,6 +3,7 @@ import Data.Vect
 import Data.Vect.Views
 import Data.Nat.Views
 
+
 -- 1. Implement an equalSuffix function using the SnocList view defined in Data.List.Views
 -- should return the maximum equal suffix of the two input lists
 
@@ -24,6 +25,7 @@ mergeSort input with (splitRec input)
   mergeSort (xs ++ ys) | (SplitRecPair lrec rrec) 
              = merge (mergeSort xs | lrec) (mergeSort ys | rrec)
 
+
 -- 3. Write a toBinary function that converts a Nat to a String containing a binary representation of the Nat. You should use the HalfRec view defined in Data.Nat.Views
 
 toBinary : Nat -> String
@@ -32,4 +34,4 @@ toBinary n with (halfRec n)
   toBinary (x + x) | (HalfRecEven rec) = (toBinary x | rec) ++ "0"
   toBinary (S (x + x)) | (HalfRecOdd rec) = (toBinary x | rec) ++ "1"
 
-
+-- 4. Write a palindrome function that returns whether a list is the same when traversed forwards and backwards, using the VList view defined in Data.List.Views
