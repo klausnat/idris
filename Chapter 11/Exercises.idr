@@ -45,9 +45,14 @@ square_root_approx number approx = let next = getNext number approx in next :: s
 -- first approximation of a square root should be within a desired bound
 square_root_bound : (max : Nat) -> (number : Double) -> (bound : Double) -> (approxs : Stream Double) -> Double
 square_root_bound Z number bound (value :: xs) = value
-square_root_bound (S k) number bound approxs = ?square_root_bound_rhs_2
+square_root_bound (S k) number bound (value :: xs) = if abs (value * value - number) < bound 
+                                                        then value 
+                                                        else square_root_bound k number bound xs
 
 
+square_root : (number : Double) -> Double
+square_root number = square_root_bound 100 number 0.00000000001
+                                 (square_root_approx number number)
 
 
 
