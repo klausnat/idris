@@ -3,6 +3,10 @@ data InfIO : Type where
   
 data Fuel = Dry | More (Lazy Fuel)
 
+-- defining do notation for infinite sequences of actions
+(>>=) : IO a -> (a -> Inf InfIO) -> InfIO
+(>>=) = Do
+
 forever : Fuel
 forever = More forever
 
@@ -11,15 +15,16 @@ tank Z = Dry
 tank (S k) = More (tank k)
 
 loopPrint : String -> InfIO  
-loopPrint msg = Do (putStrLn msg)
-                   (\_ => loopPrint msg )
+loopPrint msg = do putStrLn msg
+                   loopPrint msg
 
 run : Fuel -> InfIO -> IO ()
 run Dry p = putStrLn "Run out of fuel" 
 run (More x) (Do action cont) = do res <- action
                                    run x (cont res)
-                                   
-                               
+                                                                      
+
+
 {-                                       
 -- Internal definition of Inf and Lazy
 data DelayReason = Infinite | LazyValue
