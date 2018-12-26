@@ -15,7 +15,7 @@ data ConsoleIO : Type -> Type where
      Quit : a -> ConsoleIO a
      Do : Command a -> (a -> Inf (ConsoleIO b)) -> ConsoleIO b
 
-data Fuel = Dry | More Fuel
+data Fuel = Dry | More (Lazy Fuel)
 
 partial
 forever : Fuel
@@ -49,7 +49,7 @@ mutual
                       quiz xs score
 
   wrong : (correctA : Int) -> (score : Nat) -> Stream Int -> ConsoleIO Nat 
-  wrong correctA score xs = do PutStr ("Wrong answer, correct one is: " ++ show correctA)
+  wrong correctA score xs = do PutStr ("Wrong answer, correct one is: " ++ show correctA ++ "\n")
                                quiz xs score
   
   quiz : Stream Int -> (score : Nat) -> ConsoleIO Nat
@@ -60,8 +60,6 @@ mutual
             QuitCmd => Quit score
             Answer answer => if answer == num1 * num2 then right (score + 1) nums
                                                       else wrong (num1 * num2) score nums
-
--- Do : Command a -> (a -> Inf (ConsoleIO b)) -> ConsoleIO b
 
 run : Fuel -> ConsoleIO a -> IO (Maybe a)
 run fuel (Quit x) = do pure (Just x)
