@@ -62,21 +62,21 @@ terminal = do res <- parseInput "Command: "
               case res of ExitCmd => Quit "Bye - Bye"
                           Copy source destination => do content <- ReadFile source
                                                         case content of 
-                                                             Left => do PutStr "Error reading f. /n"
-                                                                        terminal
+                                                             Left f => do PutStr "Error reading f. \n"
+                                                                          terminal
                                                              Right cnt => do result <- WriteFile cnt destination
-                                                                             case result of Left => do PutStr "Error writing to a file /n"
-                                                                                                       terminal
-                                                                                            Right => do PutStr "Writing done, check it! /n"
-                                                                                                        terminal
+                                                                             case result of Left _ => do PutStr "Error writing to a file \n"
+                                                                                                         terminal
+                                                                                            Right _ => do PutStr "Writing done, check it! \n"
+                                                                                                          terminal
                           Cat filename => do content <- ReadFile filename
                                              case content of
-                                                  Left => do PutStr "Error reading file /n"
-                                                             terminal
+                                                  Left f => do PutStr "Error reading file \n"
+                                                               terminal
                                                   Right cnt => do PutStr cnt
                                                                   terminal
                           
-                          InputError => do PutStr "Invalid command /n"
+                          InputError => do PutStr "Invalid command \n"
                                            terminal
 
 
