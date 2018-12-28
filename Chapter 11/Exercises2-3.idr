@@ -64,7 +64,7 @@ terminal = do res <- parseInput "Command: "
                                                         case content of 
                                                              Left f => do PutStr "Error reading f. \n"
                                                                           terminal
-                                                             Right cnt => do result <- WriteFile cnt destination
+                                                             Right cnt => do result <- WriteFile destination cnt
                                                                              case result of Left _ => do PutStr "Error writing to a file \n"
                                                                                                          terminal
                                                                                             Right _ => do PutStr "Writing done, check it! \n"
