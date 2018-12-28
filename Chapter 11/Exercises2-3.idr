@@ -3,7 +3,7 @@
 
 %default total
 
-data Input = Cat String | Copy String String | ExitCmd
+data Input = Cat String | Copy String String | ExitCmd | InputError
 
 data Command : Type -> Type where
      PutStr : String -> Command ()
@@ -46,21 +46,43 @@ run f (Quit y) = pure (Just y)
 run (More x) (Do z f) = do res <- runCommand z
                            run x (f res)
 
+readInput : List String -> Command Input
+readInput ("cat" :: [a]) = Pure (Cat a)
+readInput ("copy" :: a :: [b]) = Pure (Copy a b)
+readInput ["exit"] = Pure ExitCmd
+readInput _ = Pure InputError
+
 parseInput : (prompt : String) -> Command Input
 parseInput prompt = do PutStr prompt
                        res <- GetLine
-                       case toLower res of
-                            "exit" => Pure ExitCmd
-                            
+                       readInput (words res)
 
 terminal : ConsoleIO String
 terminal = do res <- parseInput "Command: "
-              case res of ExitCmd => ?ss
-                          Copy source destination => ?oo
-                          Cat filename => ?uu
+              case res of ExitCmd => Quit "Bye - Bye"
+                          Copy source destination => do content <- ReadFile source
+                                                        case content of 
+                                                             Left => do PutStr "Error reading f. /n"
+                                                                        terminal
+                                                             Right cnt => do result <- WriteFile cnt destination
+                                                                             case result of Left => do PutStr "Error writing to a file /n"
+                                                                                                       terminal
+                                                                                            Right => do PutStr "Writing done, check it! /n"
+                                                                                                        terminal
+                          Cat filename => do content <- ReadFile filename
+                                             case content of
+                                                  Left => do PutStr "Error reading file /n"
+                                                             terminal
+                                                  Right cnt => do PutStr cnt
+                                                                  terminal
+                          
+                          InputError => do PutStr "Invalid command /n"
+                                           terminal
+
 
 partial
 main : IO ()
-main = do putStr "Bye"
-          
-        
+main = do res <- run forever terminal
+          case res of Just x => putStrLn x
+                      Nothing => putStrLn "Run out of fuel"
+
