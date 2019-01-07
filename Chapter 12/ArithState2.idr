@@ -1,8 +1,11 @@
 import Data.Primitives.Views
 import System
 
+%default total
+
 data Fuel = Dry | More (Lazy Fuel)
 
+partial
 forever : Fuel 
 forever = More forever
 
@@ -64,14 +67,25 @@ processInput prompt = do PutStr prompt
                               "quit" => Pure QuitCmd
                               answer => Pure (Answer (cast answer))
 
-runCommand : Command a -> (rnds : Stream Int) -> (state : GameState) -> IO (a, rnds, state)
-runCommand (PutStr x) rnds state = (putStr x, rnds, state)
-runCommand GetLine rnds state = ?runCommand_rhs_2
-runCommand GetState rnds state = ?runCommand_rhs_3
-runCommand (PutState x) rnds state = ?runCommand_rhs_4
-runCommand GetRundom rnds state = ?runCommand_rhs_5
-runCommand (Pure x) rnds state = ?runCommand_rhs_6
-runCommand (Bind x f) rnds state = ?runCommand_rhs_7
+runCommand : Command a -> (rnds : Stream Int) -> (state : GameState) -> IO (a, Stream Int, GameState)
+runCommand (PutStr x) rnds state = do putStr x
+                                      pure ((), rnds, state)
+runCommand GetLine rnds state = do x <- getLine
+                                   pure (x, rnds, state)
+runCommand GetState rnds state = pure (state, rnds, state)
+runCommand (PutState x) rnds state = pure (x, rnds, x)
+runCommand GetRundom (value :: xs) state = pure (value', xs, state) where
+                                                    value' = makeInt value (difficulty state)
+                                                    makeInt : Int -> Int -> Int
+                                                    makeInt x y with (divides x y)
+                                                      makeInt x 0 | DivByZero = 1
+                                                      makeInt ((y * div) + rem) y | (DivBy prf) = (abs rem) + 1
+
+
+                                           
+runCommand (Pure x) rnds state = pure (x, rnds, state)
+runCommand (Bind x f) rnds state = do (res, newRnds, newState) <- runCommand x rnds state
+                                      runCommand (f res) newRnds newState
 
 mutual 
   quiz : ConsoleIO GameState
@@ -93,4 +107,16 @@ mutual
   wrong = do st <- GetState
              PutState (addAttempted st)
              quiz
+
+run : Fuel -> Stream Int -> GameState -> ConsoleIO GameState -> IO (Maybe GameState, Stream Int, GameState )
+run Dry rnds state z = pure (Nothing, rnds, state)
+run fuel rnds state Quit = pure (Just state, rnds, state)
+run (More fuel) rnds state (Do z f) = do (res, newRnds, newState) <- runCommand z rnds state
+                                         run fuel newRnds newState (f res)
+partial
+main : IO ()
+main = do seed <- time
+          (Just state, rnds, st) <- run forever (random (fromInteger seed)) initstate quiz 
+                            | _ => putStr "run out of fuel"
+          putStr ("Final score: " ++ show state)
 
