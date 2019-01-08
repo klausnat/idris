@@ -48,7 +48,7 @@ namespace StackDo
 
 data Fuel = Dry | More (Lazy Fuel)
 
-data StkInput = Number Integer | Add | Substract | Multiply | Negate
+data StkInput = Number Integer | Add | Substract | Multiply | Negate | Discard | Duplicate
 
 strToInput : String -> Maybe StkInput
 strToInput "" = Nothing
@@ -56,6 +56,8 @@ strToInput "add" = Just Add
 strToInput "substract" = Just Substract
 strToInput "multiply" = Just Multiply
 strToInput "negate" = Just Negate
+strToInput "discard" = Just Discard
+strToInput "duplicate" = Just Duplicate
 strToInput x = if all isDigit (unpack x) then Just (Number (cast x))
                                          else Nothing
 
@@ -79,9 +81,13 @@ doNegate : StackCmd () (S height) (S height)
 doNegate = do val1 <- Pop
               Push (0 - val1)
 
-doDiscard : StackCmd () (S height) (height)
-doDiscard = do res <- Pop
-               pure res
+doDiscard : StackCmd Integer (S height) (height)
+doDiscard = Pop
+
+doDuplicate : StackCmd () (S height) (S (S height))
+doDuplicate = do val1 <- Top
+                 Push val1
+                              
 
 mutual 
   tryAdd : StackIO height
@@ -122,12 +128,21 @@ mutual
  
   tryDiscard : StackIO height
   tryDiscard {height = (S h)} = do res <- doDiscard
-                                   PutStr ("Result: " ++ show res ++ "\n")
+                                   PutStr ("Discarded: " ++ show res ++ "\n")
                                    stackCalc
                                  
   tryDiscard = do PutStr "No items on the stack \n"
                   stackCalc
-    
+  
+  tryDuplicate : StackIO height
+  tryDuplicate {height = (S h)} = do doDuplicate
+                                     res <- Top
+                                     PutStr ("Duplicated: " ++ show res ++ "\n")
+                                     stackCalc
+                                 
+  tryDuplicate = do PutStr "No items on the stack \n"
+                    stackCalc
+          
   stackCalc : StackIO height
   stackCalc = do PutStr "> "
                  input <- GetStr
@@ -141,6 +156,7 @@ mutual
                       Just Multiply => tryMultiply
                       Just Negate => tryNegate
                       Just Discard => tryDiscard
+                      Just Duplicate => tryDuplicate
   
 partial
 forever : Fuel
