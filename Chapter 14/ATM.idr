@@ -2,6 +2,10 @@ import Data.Vect
 
 data ATMState = Ready | CardInserted | Session
 
+data HasCard : ATMState -> Type where
+     HasCI : HasCard CardInserted 
+     HasSession : HasCard Session  
+
 PIN : Type
 PIN = Vect 4 Char
 
@@ -13,7 +17,7 @@ data PINCheck = CorrectPIN | IncorrectPIN
 data ATMCmd : (ty : Type) -> ATMState -> (ty -> ATMState) -> Type where
               
               InsertCard : ATMCmd () Ready (const CardInserted)
-              EjectCard : ATMCmd () state (const Ready)
+              EjectCard : {auto prf : HasCard state} -> ATMCmd () state (const Ready)
               
               GetPIN : ATMCmd PIN CardInserted (const CardInserted)
               CheckPIN : PIN -> ATMCmd PINCheck CardInserted 
