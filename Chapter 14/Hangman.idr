@@ -65,3 +65,31 @@ data Game : GameState -> Type where
                   (missing : Vect letters Char) -> 
                   Game (Running guesses letters)
 
+Show (Game g) where
+  show GameStart = "Starting"
+  show (GameWon word) = "Game won, word was: " ++ word
+  show (GameLost word) = "Game lost, word was: " ++ word
+  show (InProgress word guesses missing) = (pack (map showLetter (unpack word))) 
+                                           ++ "\n" ++ show guesses ++ " guesses left"  where
+                                             showLetter : Char -> Char 
+                                             showLetter x = if elem x missing then '-' else x
+
+data Fuel = Dry | More (Lazy Fuel)
+
+data GameResult : (ty : Type) -> (ty -> GameState) -> Type where
+     OK : (res : ty) -> Game (outstate_fn res) -> GameResult ty outstate_fn
+     OutOfFuel : GameResult ty outstate_fn
+
+runCmd : Fuel -> Game instate -> GameCmd ty instate outstate_fn -> IO (GameResult ty outstate_fn) 
+runCmd fuel state cmd = ?runCmd_rhs
+
+run : Fuel -> Game instate -> GameLoop ty instate outstate_fn -> IO (GameResult ty outstate_fn) 
+run Dry _ _ = pure OutOfFuel 
+run (More fuel) st (cmd >>= next) = ?ss
+run (More fuel) st Exit = pure (OK () st)
+
+%default partial 
+forever : Fuel
+forever = More forever
+
+main : IO ()
