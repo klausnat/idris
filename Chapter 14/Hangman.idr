@@ -8,8 +8,11 @@ data GameState : Type where
 
 data GuessResult = Correct | Incorrect
 
+letters : String -> List Char
+letters str = nub (map toUpper (unpack str))
+
 data GameCmd : (ty : Type) -> GameState -> (ty -> GameState) -> Type where
-     NewGame : (word : String) -> GameCmd () NotRunning (const (Running 6 (length word))) 
+     NewGame : (word : String) -> GameCmd () NotRunning (const (Running 6 (length (letters word)))) 
      Won : GameCmd () (Running (S guesses) 0) (const NotRunning)
      Lost : GameCmd () (Running 0 (S letters)) (const NotRunning)
      Guess : (c : Char) -> GameCmd GuessResult 
@@ -25,9 +28,6 @@ data GameCmd : (ty : Type) -> GameState -> (ty -> GameState) -> Type where
      Message : String -> GameCmd () state (const state)
      ReadGuess : GameCmd Char state (const state)  
      
-letters : String -> List Char
-letters str = nub (map toUpper (unpack str))
-
 namespace Loop
   data GameLoop : (ty : Type) -> GameState -> (ty -> GameState) -> Type where
        (>>=) : GameCmd a state1 state2_fn -> 
@@ -62,8 +62,8 @@ data Game : GameState -> Type where
      GameWon : (word : String) -> Game NotRunning
      GameLost : (word : String) -> Game NotRunning
      InProgress : (word : String) -> (guesses : Nat) -> 
-                  (missing : Vect letters Char) -> 
-                  Game (Running guesses letters)
+                  (missing : Vect ltrs Char) -> 
+                  Game (Running guesses ltrs)
 
 Show (Game g) where
   show GameStart = "Starting"
@@ -80,13 +80,27 @@ data GameResult : (ty : Type) -> (ty -> GameState) -> Type where
      OK : (res : ty) -> Game (outstate_fn res) -> GameResult ty outstate_fn
      OutOfFuel : GameResult ty outstate_fn
 
+ok : (res : ty) -> Game (outstate_fn res) -> IO (GameResult ty outstate_fn)
+ok res st = pure (OK res st)
+
 runCmd : Fuel -> Game instate -> GameCmd ty instate outstate_fn -> IO (GameResult ty outstate_fn) 
-runCmd fuel state cmd = ?runCmd_rhs
+runCmd fuel state (NewGame word) = ok () (InProgress (toUpper word) _ (fromList (letters word))) 
+runCmd fuel (InProgress word _ missing) Won = ?runCmd_rhs_1
+runCmd fuel state Lost = ?runCmd_rhs_3
+runCmd fuel state (Guess c) = ?runCmd_rhs_4
+runCmd fuel state (Pure res) = ?runCmd_rhs_5
+runCmd fuel state (x >>= f) = ?runCmd_rhs_6
+runCmd fuel state ShowState = ?runCmd_rhs_7
+runCmd fuel state (Message x) = ?runCmd_rhs_8
+runCmd fuel state ReadGuess = ?runCmd_rhs_9
 
 run : Fuel -> Game instate -> GameLoop ty instate outstate_fn -> IO (GameResult ty outstate_fn) 
 run Dry _ _ = pure OutOfFuel 
-run (More fuel) st (cmd >>= next) = ?ss
-run (More fuel) st Exit = pure (OK () st)
+run (More fuel) st (cmd >>= next) = do OK cmdRes newSt <- runCmd fuel st cmd
+                                            | OutOfFuel => pure OutOfFuel
+                                       run fuel newSt (next cmdRes)
+                                       
+run (More fuel) st Exit = ok () st
 
 %default partial 
 forever : Fuel
