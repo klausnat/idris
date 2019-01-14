@@ -85,14 +85,30 @@ ok res st = pure (OK res st)
 
 runCmd : Fuel -> Game instate -> GameCmd ty instate outstate_fn -> IO (GameResult ty outstate_fn) 
 runCmd fuel state (NewGame word) = ok () (InProgress (toUpper word) _ (fromList (letters word))) 
-runCmd fuel (InProgress word _ missing) Won = ?runCmd_rhs_1
-runCmd fuel state Lost = ?runCmd_rhs_3
-runCmd fuel state (Guess c) = ?runCmd_rhs_4
-runCmd fuel state (Pure res) = ?runCmd_rhs_5
-runCmd fuel state (x >>= f) = ?runCmd_rhs_6
-runCmd fuel state ShowState = ?runCmd_rhs_7
-runCmd fuel state (Message x) = ?runCmd_rhs_8
-runCmd fuel state ReadGuess = ?runCmd_rhs_9
+runCmd fuel (InProgress word _ missing) Won = ok () (GameWon word)
+runCmd fuel (InProgress word _ missing) Lost = ok () (GameLost word)
+runCmd fuel (InProgress word _ missing) (Guess c) 
+  = case isElem c missing of
+      Yes prf => ok Correct (InProgress word _ (dropElem missing prf))
+      No contra => ok Incorrect (InProgress word _ missing)
+runCmd fuel state (Pure res) = ok res state
+runCmd fuel st (cmd >>= next) = do OK cmdRes newSt <- runCmd fuel st cmd
+                                         | _ => pure OutOfFuel
+                                   runCmd fuel newSt (next cmdRes)
+runCmd fuel state ShowState = do printLn state
+                                 ok "state printed" state
+runCmd fuel state (Message x) = do putStrLn x
+                                   ok () state
+runCmd Dry state ReadGuess = pure OutOfFuel
+runCmd (More fuel) state ReadGuess = do putStr "Guess: "
+                                        guess <- getLine
+                                        case unpack guess of
+                                             [x] => case isAlpha x of 
+                                                         True => ok (toUpper x) state
+                                                         False => do putStrLn "Invalid input"
+                                                                     runCmd fuel state ReadGuess
+                                             _ => do putStrLn "Invalid input"
+                                                     runCmd fuel state ReadGuess
 
 run : Fuel -> Game instate -> GameLoop ty instate outstate_fn -> IO (GameResult ty outstate_fn) 
 run Dry _ _ = pure OutOfFuel 
@@ -107,3 +123,5 @@ forever : Fuel
 forever = More forever
 
 main : IO ()
+main = do run forever GameStart hangman
+          pure ()
