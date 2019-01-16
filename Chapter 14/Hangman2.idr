@@ -80,15 +80,28 @@ data GameResult : (ty : Type) -> (ty -> GameState) -> Type where
 ok : (res : ty) -> Game (outstate_fn res) -> IO (GameResult ty outstate_fn)
 ok res st = pure (OK res st)
 
+runCmd : Fuel -> Game instate -> GameCmd ty instate outstate_fn -> IO (GameResult ty outstate_fn)
+runCmd Dry y z = pure OutOfFuel
+runCmd (More fuel) y (NewGame word) = ?runCmd_rhs_1
+runCmd (More fuel) y Won = ?runCmd_rhs_3
+runCmd (More fuel) y Lost = ?runCmd_rhs_4
+runCmd (More fuel) y (Guess c) = ?runCmd_rhs_5
+runCmd (More fuel) y ReadGuess = ?runCmd_rhs_6
+runCmd (More fuel) y (x >>= f) = ?runCmd_rhs_7
+runCmd (More fuel) y (Pure res) = ?runCmd_rhs_8
+runCmd (More fuel) y (Message x) = ?runCmd_rhs_9
+runCmd (More fuel) y ShowState = ?runCmd_rhs_10
 
-{-
-runCmd : res -> Game (statefn res) -> GameCmd   -> IO (GameResult res outstate_fn)
-                                             
-run : Fuel -> 
-
--}
+run : Fuel -> Game instate -> GameLoop ty instate outstate_fn -> IO (GameResult ty outstate_fn)
+run Dry y z = pure OutOfFuel
+run (More fuel) y (cmd >>= next) = do OK cmdRes newSt <- runCmd fuel y cmd
+                                                | OutOfFuel => pure OutOfFuel
+                                      run fuel newSt (next cmdRes)          
+run fuel st Exit = ok () st
 
 %default partial
 forever : Fuel
 forever = More forever
 main : IO ()
+main = do run forever GameStart hangman
+          pure ()
