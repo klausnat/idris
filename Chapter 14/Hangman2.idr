@@ -34,18 +34,18 @@ namespace Loop
        Exit : GameLoop () NotRunning (const NotRunning)
      
 gameLoop : GameLoop () (Running (S guesses) (S letters)) (const NotRunning)
-gameLoop {guesses} {letters} = do c <- ReadGuess
-                                  ShowState
+gameLoop {guesses} {letters} = do ShowState
+                                  c <- ReadGuess
                                   g <- Guess c
                                   case g of Correct => case letters of Z => do Message "You win!"
                                                                                Won
                                                                                Exit
-                                                                       (S ltrs) => do ShowState
+                                                                       (S ltrs) => do Message "Correct! \n"
                                                                                       gameLoop
                                             Incorrect => case guesses of Z => do Message "You Loose!"
                                                                                  Lost
                                                                                  Exit
-                                                                         (S gss) => do ShowState
+                                                                         (S gss) => do Message "Wrong! \n"
                                                                                        gameLoop
                                                                                 
 hangman : GameLoop () NotRunning (const NotRunning)
@@ -82,15 +82,29 @@ ok res st = pure (OK res st)
 
 runCmd : Fuel -> Game instate -> GameCmd ty instate outstate_fn -> IO (GameResult ty outstate_fn)
 runCmd Dry y z = pure OutOfFuel
-runCmd (More fuel) y (NewGame word) = ?runCmd_rhs_1
-runCmd (More fuel) y Won = ?runCmd_rhs_3
-runCmd (More fuel) y Lost = ?runCmd_rhs_4
-runCmd (More fuel) y (Guess c) = ?runCmd_rhs_5
-runCmd (More fuel) y ReadGuess = ?runCmd_rhs_6
-runCmd (More fuel) y (x >>= f) = ?runCmd_rhs_7
-runCmd (More fuel) y (Pure res) = ?runCmd_rhs_8
-runCmd (More fuel) y (Message x) = ?runCmd_rhs_9
-runCmd (More fuel) y ShowState = ?runCmd_rhs_10
+runCmd (More fuel) instate (NewGame word) = ok () (InProgress (toUpper word) _ (fromList (letters word)))
+runCmd (More fuel) (InProgress word _ missing) Won = ok () (GameWon word)
+runCmd (More fuel) (InProgress word _ missing) Lost = ok () (GameLost word)
+runCmd (More fuel) (InProgress word _ missing) (Guess c) = case isElem c missing of
+                                                                Yes prf => ok Correct (InProgress word _ (dropElem missing prf))
+                                                                No contra => ok Incorrect (InProgress word _ missing)
+runCmd (More fuel) y ReadGuess = do putStr "Guess: "
+                                    g <- getLine
+                                    case unpack g of
+                                         [x] => case isAlpha x of True => ok (toUpper x) y
+                                                                  False => do putStrLn "Invalid input"
+                                                                              runCmd fuel y ReadGuess
+                                         _ => do putStrLn "Invalid Input"
+                                                 runCmd fuel y ReadGuess
+                                                                  
+runCmd (More fuel) instate (cmd >>= next) = do OK cmdRes outSt <- runCmd fuel instate cmd
+                                                               | OutOfFuel => pure OutOfFuel   
+                                               runCmd fuel outSt (next cmdRes)
+runCmd (More fuel) y (Pure res) = ok res y
+runCmd (More fuel) y (Message x) = do putStrLn x
+                                      ok () y
+runCmd (More fuel) y ShowState = do putStrLn (show y)
+                                    ok "State is: " y
 
 run : Fuel -> Game instate -> GameLoop ty instate outstate_fn -> IO (GameResult ty outstate_fn)
 run Dry y z = pure OutOfFuel
