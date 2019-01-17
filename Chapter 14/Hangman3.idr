@@ -18,11 +18,11 @@ data GameCmd : (ty : Type) -> GameState -> (ty -> GameState) -> Type where
      Lost : GameCmd () (Running 0 (S letters)) (const NotRunning)
      Won : GameCmd () (Running (S guesses) 0) (const NotRunning)
      Message : String -> GameCmd () state (const state)
-     GetState : GameCmd GameState state (const state)
-     (>>=) : (res : a) -> GameCmd a (state2_fn res) state2_fn
-     Pure : GameCmd a state1 state2_fn -> 
-            ((res : a) -> (GameCmd b (state2_fn res) state3_fn)) -> 
-            GameCmd b state1 state3_fn
+     GetState : GameCmd () state (const state)
+     (>>=) : GameCmd a state1 state2_fn ->
+             ((res : a) -> GameCmd b (state2_fn res) state3_fn) ->
+             GameCmd b state1 state3_fn
+     Pure : (res : ty) -> (GameCmd ty (state2_fn res) state2_fn) 
      Guess : Char -> 
              GameCmd GuessResult
              (Running (S guesses) (S letters)) 
@@ -88,18 +88,43 @@ ok res st = pure (OK res st)
 
 runCmd : Fuel -> Game instate -> GameCmd ty instate outstate_fn -> IO (GameResult ty outstate_fn)
 runCmd Dry y z = pure OutOfFuel
-runCmd (More x) y (StartGame word) = ?runCmd_rhs_1
-runCmd (More x) y Lost = ?runCmd_rhs_3
+runCmd (More x) y (StartGame word) = ok () 
+                                        (InProcess (toUpper word) _ (fromList (letters word)))
+runCmd (More x) (InProcess word _ missing) Lost = ok () (GameLost word)
 runCmd (More x) (InProcess word _ missing) Won = ok () (GameWon word)
-runCmd (More x) y (Message z) = ?runCmd_rhs_5
-runCmd (More x) y GetState = ?runCmd_rhs_6
-runCmd (More x) y ((>>=) res) = ?runCmd_rhs_7
-runCmd (More x) y (Pure z f) = ?runCmd_rhs_8
-runCmd (More x) y (Guess z) = ?runCmd_rhs_9
-runCmd (More x) y GetGuess = ?runCmd_rhs_10
+runCmd (More x) y (Message z) = do putStr z
+                                   ok () y
+runCmd (More x) y GetState = do printLn y
+                                ok () y
+runCmd (More x) y (cmd >>= next) = do OK cmdNew stNew <- runCmd x y cmd
+                                                      | _ => pure OutOfFuel
+                                      runCmd x stNew (next cmdNew)
+runCmd (More x) y (Pure res) = ok res y
+runCmd (More x) (InProcess word _ missing) (Guess c) = case isElem c missing of
+                                                            Yes prf => ok Correct (InProcess word _ (dropElem missing prf))
+                                                            No contra => ok Incorrect (InProcess word _ missing)
+runCmd (More x) y GetGuess = do putStr "Guess: "
+                                c <- getLine
+                                case unpack c of
+                                     [z] => case isAlpha z of
+                                                 True => ok (toUpper z) y
+                                                 False => do putStrLn "Invalid input"
+                                                             runCmd x y GetGuess
+                                     _ => do putStrLn "Invalid input"
+                                             runCmd x y GetGuess
+                                      
+run : Fuel -> Game instate -> GameLoop ty instate outstate_fn -> IO (GameResult ty outstate_fn)
+run Dry y z = pure OutOfFuel
+run (More x) y (z >>= f) = do OK res newSt <- runCmd x y z
+                                           | _ => pure OutOfFuel
+                              run x newSt (f res)   
+run (More x) y Exit = ok () y
+
 
 %default partial
 
 forever : Fuel
 forever = More forever
 main : IO ()
+main = do run forever GameStart hangman
+          pure ()
